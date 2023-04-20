@@ -4,9 +4,7 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
-RUN curl -sSL https://install.python-poetry.org | python -
-RUN ln -s $HOME/.local/bin/poetry /usr/local/bin/poetry
-
+RUN pip install poetry
 
 COPY poetry.lock poetry.lock
 COPY pyproject.toml pyproject.toml
