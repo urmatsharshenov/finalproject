@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import generics
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from users.serializers import UserRegisterSerializer
@@ -10,6 +11,7 @@ User = get_user_model()
 class RegisterAPI(generics.GenericAPIView):
     serializer_class = UserRegisterSerializer
     queryset = User.objects.all()
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
