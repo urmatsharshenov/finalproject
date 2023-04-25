@@ -1,13 +1,13 @@
-from django.contrib.auth import get_user_model
-from django.contrib.auth.views import LoginView, LogoutView
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import never_cache
-from django.views.decorators.debug import sensitive_post_parameters
+from django.contrib.auth import get_user_model, authenticate, login, logout
+from django.core.exceptions import BadRequest
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics
-from rest_framework.permissions import AllowAny
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
-from users.serializers import UserRegisterSerializer
+from users.serializers import UserRegisterSerializer, LoginSerializer, UserSerializer
 
 User = get_user_model()
 
@@ -24,9 +24,32 @@ class RegisterAPI(generics.GenericAPIView):
         return Response({"message": "Registered"})
 
 
-class LoginView2(LoginView):
+class UsersAPIViewSet(GenericViewSet):
+    serializer_class = UserSerializer
 
-    @method_decorator(sensitive_post_parameters())
-    @method_decorator(never_cache)
-    def dispatch(self, request, *args, **kwargs):
-        super(LoginView2, self).dispatch(request, *args, **kwargs)
+    @action(
+        methods=['POST'], detail=False, url_path='login',
+        serializer_class=LoginSerializer, permission_classes=[],
+    )
+    @csrf_exempt
+    def login(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = authenticate(
+            username=serializer.validated_data.get('username'),
+            password=serializer.validated_data.get('password'),
+        )
+
+        if not user:
+            raise BadRequest(f"Wrong password or username")
+
+        login(request, user)
+        return Response(UserSerializer(user).data)
+
+    @action(
+        methods=['POST'], detail=False, url_path='logout',
+        permission_classes=(IsAuthenticated,)
+    )
+    def logout(self, request):
+        logout(request)
+        return Response({'message': 'Successfully logged out'})
