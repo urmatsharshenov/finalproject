@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model, authenticate, login, logout
+from rest_framework.authtoken.models import Token
 from django.core.exceptions import BadRequest
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics
@@ -28,7 +29,7 @@ class UsersAPIViewSet(GenericViewSet):
     serializer_class = UserSerializer
 
     @action(
-        methods=['POST'], detail=False, url_path='login',
+        methods=['POST'], detail=False, url_path='login/',
         serializer_class=LoginSerializer, permission_classes=[],
     )
     @csrf_exempt
@@ -44,12 +45,17 @@ class UsersAPIViewSet(GenericViewSet):
             raise BadRequest(f"Wrong password or username")
 
         login(request, user)
-        return Response(UserSerializer(user).data)
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({"token": token.key})
 
     @action(
-        methods=['POST'], detail=False, url_path='logout',
+        methods=['POST'], detail=False, url_path='logout/',
         permission_classes=(IsAuthenticated,)
     )
     def logout(self, request):
         logout(request)
+        try:
+            Token.objects.delete(user=request.user)
+        except Exception as e:
+            pass
         return Response({'message': 'Successfully logged out'})
